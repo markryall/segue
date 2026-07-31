@@ -36,23 +36,41 @@ module Segue
       [(duration - (@current.get("time-pos") || 0)).round, 0].max
     end
 
-    def fadeout
-      fade([@current, MAX_VOLUME, 0])
+    # True while a ramp is still running on its own thread. The caller is
+    # expected to leave the player alone until it finishes.
+    def fading?
+      @fade&.alive? || false
+    end
+
+    def await_fade
+      @fade&.join
+      @fade = nil
+    end
+
+    # Ramps down and then runs the block, if given, on the fade thread - that
+    # keeps "fade out and then pause" in order without the caller waiting.
+    def fadeout(&)
+      start_fade([@current, MAX_VOLUME, 0], &)
     end
 
     def fadein
       @current.set("volume", 0)
       play
-      fade([@current, 0, MAX_VOLUME])
+      start_fade([@current, 0, MAX_VOLUME])
     end
 
+    # Loading is done up front and the instances swapped straight away, so the
+    # incoming track is what time/remaining/playing? report while it fades up.
     def crossfade(path)
-      @other.set("volume", 0)
-      @other.load(path)
-      fade([@current, MAX_VOLUME, 0], [@other, 0, MAX_VOLUME])
-      @current.command("stop")
-      @current, @other = @other, @current
+      outgoing = @current
+      incoming = @other
+      incoming.set("volume", 0)
+      incoming.load(path)
+      @current = incoming
+      @other = outgoing
       @stopped = nil
+
+      start_fade([outgoing, MAX_VOLUME, 0], [incoming, 0, MAX_VOLUME]) { outgoing.command("stop") }
     end
 
     def play(path = nil)
@@ -78,6 +96,7 @@ module Segue
     end
 
     def cleanup
+      await_fade
       [@current, @other].compact.each(&:close)
       @current = @other = nil
       @processes.each do |pid, socket_path|
@@ -110,11 +129,17 @@ module Segue
     end
 
     # Each ramp is [mpv, from, to] and they all step together, which is what
-    # makes a crossfade a crossfade rather than two sequential fades.
-    def fade(*ramps)
-      (0..FADE_STEPS).each do |step|
-        ramps.each { |mpv, from, to| mpv.set("volume", level(from, to, step)) }
-        sleep FADE_STEP_SECONDS
+    # makes a crossfade a crossfade rather than two sequential fades. Runs off
+    # the main thread so the display keeps redrawing and keys keep responding
+    # for the five and a half seconds this takes.
+    def start_fade(*ramps, &after)
+      await_fade
+      @fade = Thread.new do
+        (0..FADE_STEPS).each do |step|
+          ramps.each { |mpv, from, to| mpv.set("volume", level(from, to, step)) }
+          sleep FADE_STEP_SECONDS
+        end
+        after&.call
       end
     end
 

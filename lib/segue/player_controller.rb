@@ -22,6 +22,7 @@ module Segue
     # point, so leave it flat rather than nesting it to please the metrics
     # rubocop:disable Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
     def next
+      return when_fading if @player.fading?
       return on_play if @preferences.play? && @suspended
       return on_pause if @preferences.pause? && !@suspended
       return on_stop if @preferences.stop? && !@suspended
@@ -49,18 +50,19 @@ module Segue
       suspend("Now Stopped", :stop)
     end
 
+    # The pause or stop happens on the fade thread once the ramp finishes, so
+    # the order is preserved without this call waiting for it.
     def suspend(status, method)
-      @player.fadeout
-      @player.send(method)
       @status = status
       @suspended = true
       @notifiers.track_suspended
+      @player.fadeout { @player.send(method) }
       build
     end
 
     def on_play
-      @player.fadein
       @suspended = false
+      @player.fadein
       @notifiers.track_resumed(@track, @player.time)
       when_playing_track(@player.remaining)
     end
@@ -104,10 +106,23 @@ module Segue
       when_playing_track(@track[:length])
     end
 
+    # A ramp is running on another thread - keep redrawing, but issue nothing
+    # new. A keypress during a fade stays set in preferences and is picked up
+    # on the next tick rather than being dropped.
+    def when_fading
+      return build unless @track
+
+      build(*track_lines(@player.remaining))
+    end
+
     def when_playing_track(remaining)
       @status = "Now Playing"
+      build(*track_lines(remaining))
+    end
+
+    def track_lines(remaining)
       remaining_color = remaining < 30 ? 9 : 5
-      build(
+      [
         [2, @track[:title]],
         [0, "\n"],
         [0, "by "],
@@ -120,7 +135,7 @@ module Segue
         [0, " of "],
         [0, duration(@track[:length])],
         [0, " remaining\n"]
-      )
+      ]
     end
 
     def when_empty

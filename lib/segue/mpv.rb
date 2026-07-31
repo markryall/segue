@@ -22,6 +22,7 @@ module Segue
     def initialize(socket_path)
       @socket_path = socket_path
       @request_id = 0
+      @mutex = Mutex.new
     end
 
     # mpv creates the socket a moment after it starts, so retry until it shows up.
@@ -84,12 +85,18 @@ module Segue
       sleep POLL_INTERVAL while get("time-pos").nil? && Time.now < deadline
     end
 
+    # Fades run on their own thread, so more than one thread talks to a single
+    # mpv. read_reply discards anything that isn't the reply it is waiting for,
+    # so overlapping requests would eat each other's replies and then block
+    # forever - a request has to be write-then-read atomically.
     def request(args)
       raise Error, "not connected to #{socket_path}" unless @socket
 
-      @request_id += 1
-      @socket.puts JSON.generate(command: args, request_id: @request_id)
-      read_reply(@request_id)
+      @mutex.synchronize do
+        @request_id += 1
+        @socket.puts JSON.generate(command: args, request_id: @request_id)
+        read_reply(@request_id)
+      end
     end
 
     def read_reply(id)

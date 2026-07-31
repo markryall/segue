@@ -105,6 +105,17 @@ RSpec.describe Segue::Mpv do
     expect { mpv.command("seek", "nonsense") }.to raise_error(described_class::Error, /seek: invalid parameter/)
   end
 
+  # Without a mutex around write-then-read, two threads sharing one socket each
+  # discard the other's reply and then block forever waiting for it.
+  it "keeps concurrent requests from stealing each other's replies" do
+    mpv = serving { |request| ok(request, request["command"].last) }
+
+    names = (1..8).map { |index| "prop-#{index}" }
+    results = names.map { |name| Thread.new { mpv.get(name) } }.map(&:value)
+
+    expect(results).to eq(names)
+  end
+
   it "raises when nothing is listening on the socket" do
     mpv = described_class.new(File.join(Dir.tmpdir, "segue-missing.sock"))
 
