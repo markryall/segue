@@ -1,0 +1,35 @@
+AllCops:
+  TargetRubyVersion: 3.2
+  NewCops: enable
+  SuggestExtensions: false
+
+Style/StringLiterals:
+  Enabled: true
+  EnforcedStyle: double_quotes
+
+Style/StringLiteralsInInterpolation:
+  Enabled: true
+  EnforcedStyle: double_quotes
+
+# Classes here are small enough to explain themselves
+Style/Documentation:
+  Enabled: false
+
+Layout/LineLength:
+  Max: 120
+
+Metrics/MethodLength:
+  Max: 25
+
+Metrics/AbcSize:
+  Max: 25
+
+# Player and PlayerController are cohesive - splitting them would only scatter
+# the state they share
+Metrics/ClassLength:
+  Max: 130
+
+# describe blocks are long by nature
+Metrics/BlockLength:
+  Exclude:
+    - "spec/**/*"

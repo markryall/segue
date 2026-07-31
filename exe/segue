@@ -1,0 +1,59 @@
+#!/usr/bin/env ruby
+
+# frozen_string_literal: true
+
+$LOAD_PATH.unshift File.join(File.dirname(__FILE__), "..", "lib")
+
+require "segue"
+
+command = ARGV.shift
+
+case command
+when "autoplay"
+  Segue.autoplay(ARGV.shift)
+when "clear"
+  Segue.clear
+when "crossfade"
+  Segue.crossfade(ARGV.shift)
+when "history"
+  Segue.history
+when "list"
+  Segue.list
+when "pause"
+  Segue.pause
+when "play"
+  Segue.play
+when "player"
+  Segue.player
+when "remove"
+  Segue.remove(ARGV.shift)
+when "queue"
+  Segue.queue(ARGV)
+when "scrobble"
+  Segue.scrobble(ARGV.shift)
+when "skip"
+  Segue.skip
+when "stop"
+  Segue.stop
+when "swap"
+  Segue.swap(ARGV)
+when "version"
+  puts Segue::VERSION
+else
+  puts "Unknown command \"#{command}\":"
+  puts "  autoplay on/off: continue playing tracks or stop at the end of current track"
+  puts "  clear: clear queue"
+  puts "  crossfade on/off: 5 second crossfade when changing tracks"
+  puts "  history: display play history"
+  puts "  list: list current queue"
+  puts "  pause: pause current track (resume with play)"
+  puts "  play: resume after pause/stop"
+  puts "  player: start the player"
+  puts "  queue paths: queue folders or files containing music tracks"
+  puts "  remove a: remove track from queue at index position a"
+  puts "  scrobble on/off: send track information to last.fm (requires an api key)"
+  puts "  skip: skip the current track"
+  puts "  stop: stop the player (resume with play)"
+  puts "  swap a b: swap tracks in queue at index positions a and b"
+  puts "  version: print the segue version"
+end

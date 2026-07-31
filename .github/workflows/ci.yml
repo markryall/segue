@@ -1,0 +1,31 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        ruby: ["3.2", "3.3", "3.4"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # the curses gem builds a native extension against ncurses
+      - name: Install ncurses headers
+        run: sudo apt-get update && sudo apt-get install -y libncurses-dev
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ matrix.ruby }}
+          bundler-cache: true
+
+      # mpv is not needed - the ipc specs talk to a fake mpv over a unix socket
+      - name: Run specs and rubocop
+        run: bundle exec rake
