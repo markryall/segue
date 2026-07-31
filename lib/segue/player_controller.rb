@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative "player"
+require_relative "duration"
 require_relative "track"
 require_relative "preferences"
 require_relative "queue"
@@ -129,9 +130,9 @@ module Segue
       lines += [[0, "by "], [11, @track[:artist]], [0, "\n"]] if Segue::Track.present?(@track[:artist])
       lines += [[0, "from "], [6, @track[:album]], [0, "\n"]] if Segue::Track.present?(@track[:album])
       lines + [
-        [remaining < 30 ? 9 : 5, duration(remaining)],
+        [remaining < 30 ? 9 : 5, Segue::Duration.clock(remaining)],
         [0, " of "],
-        [0, duration(@track[:length])],
+        [0, Segue::Duration.clock(@track[:length])],
         [0, " remaining\n"]
       ]
     end
@@ -150,9 +151,11 @@ module Segue
       time.strftime("%I:%M:%S")
     end
 
-    def duration(seconds)
-      seconds = seconds.to_i
-      seconds > 60 ? "#{seconds / 60}m and #{seconds % 60}s" : "#{seconds}s"
+    # The playing track has already been dropped from the queue, so this is
+    # what is still to come.
+    def queued_summary
+      count = Segue::Queue.length
+      "#{count} queued #{count == 1 ? "track" : "tracks"}"
     end
 
     def build(*extra)
@@ -164,11 +167,18 @@ module Segue
         [0, "\n"],
         [0, @status],
         [0, "\n"],
-        [0, "#{Segue::Queue.length} queued tracks"],
+        [0, queued_summary],
         [0, "\n"],
         [8, "#{autoplay}autoplay #{crossfade}crossfade #{scrobble}scrobble"],
         [0, "\n"]
-      ] + extra
+      ] + extra + shortcut_line
+    end
+
+    # Footer reminding you what the keys do, with the key itself picked out so
+    # it reads at a glance.
+    def shortcut_line
+      parts = Segue.shortcuts.flat_map { |key, label| [[8, "   "], [6, key], [8, " #{label}"]] }
+      parts.drop(1) + [[0, "\n"]]
     end
   end
 end

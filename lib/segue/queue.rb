@@ -11,17 +11,15 @@ module Segue
   class Queue
     EXTENSIONS = %w[.mp3 .m4a .flac .ogg .opus .wav .aac .wma].freeze
 
-    def initialize
-      @current_path = nil
-    end
-
+    # Handing a track out drops it from the queue immediately, so the count is
+    # what is still to come rather than including whatever is already playing.
     def next
-      FileUtils.rm_f @current_path if @current_path
-      @current_path = Segue::Queue.entries.first
-      return unless @current_path
+      path = Segue::Queue.entries.first
+      return unless path
 
-      result = YAML.load_file(@current_path)
-      File.exist?(result[:path]) ? result : self.next
+      track = YAML.load_file(path)
+      FileUtils.rm_f path
+      File.exist?(track[:path]) ? track : self.next
     end
 
     class << self

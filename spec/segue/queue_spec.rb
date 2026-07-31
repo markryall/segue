@@ -48,6 +48,18 @@ RSpec.describe Segue::Queue, :sandboxed do
     expect(described_class.length).to be_zero
   end
 
+  it "counts only what is still to come, not the track it just handed out" do
+    %w[one two three].each { |title| enqueue(title) }
+    queue = described_class.new
+
+    queue.next
+    expect(described_class.length).to eq(2)
+    queue.next
+    expect(described_class.length).to eq(1)
+    queue.next
+    expect(described_class.length).to be_zero
+  end
+
   it "hands out tracks one at a time and drops them as it goes" do
     %w[one two].each { |title| enqueue(title) }
     queue = described_class.new

@@ -15,6 +15,13 @@ require_relative "segue/scrobbler"
 module Segue
   COLOURS = [0, 2, 5, 6, 8, 9, 11].freeze
   KEYS = { " " => :pause, "n" => :skip, "p" => :play, "s" => :stop }.freeze
+  QUIT_KEY = "q"
+
+  # Derived from KEYS so the help line in the player can't drift away from what
+  # the loop actually dispatches.
+  def self.shortcuts
+    KEYS.map { |key, action| [key == " " ? "space" : key, action.to_s] } << [QUIT_KEY, "quit"]
+  end
 
   def self.autoplay(value)
     Segue::Preferences.new[:autoplay] = value == "on"
@@ -76,7 +83,7 @@ module Segue
       render(window, player_controller.next)
 
       key = window.getch.to_s
-      break if key == "q"
+      break if key == QUIT_KEY
 
       send(KEYS[key]) if KEYS.key?(key)
       sleep 0.2
