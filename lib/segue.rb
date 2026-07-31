@@ -4,6 +4,7 @@ require "curses"
 require "rainbow"
 require_relative "segue/version"
 require_relative "segue/paths"
+require_relative "segue/track"
 require_relative "segue/player"
 require_relative "segue/player_controller"
 require_relative "segue/preferences"
@@ -46,10 +47,15 @@ module Segue
   def self.list_line(track, index, start_time)
     parts = [Rainbow(index.to_s).magenta]
     parts << start_time.strftime("%I:%M:%S") if start_time
-    parts += [Rainbow(track[:title]).green, "by", Rainbow(track[:artist]).yellow]
-    parts += ["from", Rainbow(track[:album]).cyan] unless (track[:album] || "").empty?
-    parts << "(#{track[:length] / 60} minutes and #{track[:length] % 60} seconds)" if track[:length]
+    parts << Rainbow(Segue::Track.title(track)).green
+    parts += ["by", Rainbow(track[:artist]).yellow] if Segue::Track.present?(track[:artist])
+    parts += ["from", Rainbow(track[:album]).cyan] if Segue::Track.present?(track[:album])
+    parts << list_duration(track[:length]) if track[:length]
     parts.join(" ")
+  end
+
+  def self.list_duration(seconds)
+    "(#{seconds / 60} minutes and #{seconds % 60} seconds)"
   end
 
   def self.pause

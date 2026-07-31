@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative "player"
+require_relative "track"
 require_relative "preferences"
 require_relative "queue"
 require_relative "notifiers"
@@ -120,18 +121,15 @@ module Segue
       build(*track_lines(remaining))
     end
 
+    # Artist and album are left out entirely when the file had no such tag,
+    # rather than rendering a dangling "by" or "from".
     def track_lines(remaining)
-      remaining_color = remaining < 30 ? 9 : 5
-      [
-        [2, @track[:title]],
-        [0, "\n"],
-        [0, "by "],
-        [11, @track[:artist]],
-        [0, "\n"],
-        [0, "from "],
-        [6, @track[:album]],
-        [0, "\n"],
-        [remaining_color, duration(remaining)],
+      remaining = remaining.to_i
+      lines = [[2, Segue::Track.title(@track)], [0, "\n"]]
+      lines += [[0, "by "], [11, @track[:artist]], [0, "\n"]] if Segue::Track.present?(@track[:artist])
+      lines += [[0, "from "], [6, @track[:album]], [0, "\n"]] if Segue::Track.present?(@track[:album])
+      lines + [
+        [remaining < 30 ? 9 : 5, duration(remaining)],
         [0, " of "],
         [0, duration(@track[:length])],
         [0, " remaining\n"]

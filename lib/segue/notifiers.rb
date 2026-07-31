@@ -3,6 +3,7 @@
 require "rainbow"
 require "shellwords"
 require_relative "paths"
+require_relative "track"
 require_relative "preferences"
 require_relative "scrobbler"
 
@@ -30,10 +31,7 @@ module Segue
       track[:start_time] = Time.now
       @preferences[:started] = track[:start_time].to_i
       scrobbler&.now_playing(track[:artist], track[:title])
-      terminal_notify(
-        message: "#{track[:title]} by #{track[:artist]}",
-        title: "Now Playing"
-      )
+      terminal_notify(message: notification_message(track), title: "Now Playing")
 
       File.open(@history, "a") { |file| file.puts history_line(track) }
     end
@@ -48,16 +46,17 @@ module Segue
 
     private
 
+    def notification_message(track)
+      title = Segue::Track.title(track)
+      Segue::Track.present?(track[:artist]) ? "#{title} by #{track[:artist]}" : title
+    end
+
     def history_line(track)
-      [
-        display_time(track[:start_time]),
-        Rainbow(track[:title]).green,
-        "by",
-        Rainbow(track[:artist]).yellow,
-        "from",
-        Rainbow(track[:album]).cyan,
-        "(#{duration(track[:length])})"
-      ].join(" ")
+      parts = [display_time(track[:start_time]), Rainbow(Segue::Track.title(track)).green]
+      parts += ["by", Rainbow(track[:artist]).yellow] if Segue::Track.present?(track[:artist])
+      parts += ["from", Rainbow(track[:album]).cyan] if Segue::Track.present?(track[:album])
+      parts << "(#{duration(track[:length])})"
+      parts.join(" ")
     end
 
     def duration(seconds)

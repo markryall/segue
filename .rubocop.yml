@@ -25,8 +25,11 @@ Metrics/AbcSize:
   Max: 25
 
 # Player and PlayerController are cohesive - splitting them would only scatter
-# the state they share
+# the state they share, and Segue itself is just the flat list of subcommands
 Metrics/ClassLength:
+  Max: 130
+
+Metrics/ModuleLength:
   Max: 130
 
 # describe blocks are long by nature
